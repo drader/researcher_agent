@@ -1,0 +1,62 @@
+# YAML 1.2 — Citation File Format v1.2.0
+# See https://citation-file-format.github.io/ for the schema.
+# GitHub renders a "Cite this repository" button on the repo page
+# when this file is present and valid.
+
+cff-version: 1.2.0
+title: "researcher_agent: An LLM-driven research assistance framework"
+message: >-
+  If you use this software in academic work, please cite it using
+  the metadata below. The 'preferred-citation' block is what a
+  reference manager (Zotero, Mendeley, etc.) will import.
+type: software
+
+authors:
+  - family-names: "Gençer"
+    given-names: "Oğuz"
+    affiliation: "Istanbul Technical University"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"   # add when available
+
+version: "1.0.0"
+date-released: "2026-05-21"
+license: "CC-BY-NC-4.0"
+repository-code: "https://github.com/drader/researcher_agent"
+url: "https://github.com/drader/researcher_agent"
+
+keywords:
+  - "research assistant"
+  - "claude code"
+  - "academic writing"
+  - "literature review"
+  - "systematic review"
+  - "prisma 2020"
+  - "ai disclosure"
+  - "human-in-the-loop"
+  - "source-grounded generation"
+
+abstract: >-
+  researcher_agent is a modular suite of Claude Code skills, slash
+  commands, and sub-agent personas that assist a human researcher
+  through the literature → manuscript → review → revision lifecycle.
+  Four skills (research, compose, critique, orchestrate) expose 24
+  modes biased along a Generative / Hybrid / Analytic spectrum. The
+  framework enforces source-grounded outputs, requires explicit human
+  approval at major checkpoints, caps revision loops at two passes
+  per deliverable, and provides a venue-specific AI-assistance
+  disclosure mode.
+
+# Preferred citation for academic work. Reference managers will use
+# this block; it lets you cite the framework as a software artefact
+# distinct from any paper that may later describe it.
+preferred-citation:
+  type: software
+  title: "researcher_agent: An LLM-driven research assistance framework"
+  authors:
+    - family-names: "Gençer"
+      given-names: "Oğuz"
+      affiliation: "Istanbul Technical University"
+  version: "1.0.0"
+  year: 2026
+  month: 5
+  url: "https://github.com/drader/researcher_agent"
+  license: "CC-BY-NC-4.0"

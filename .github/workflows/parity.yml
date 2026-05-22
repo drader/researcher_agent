@@ -1,0 +1,72 @@
+name: parity-check
+
+# Verify the report pages, registries, and counted claims stay in
+# lockstep with the rest of the repo. See CLAUDE.md §"Documentation
+# parity" and scripts/parity-check.sh.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same ref when a new commit lands.
+concurrency:
+  group: parity-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    name: report-page + registry parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run parity-check.sh
+        id: parity
+        # The script prints which of the seven checks failed, with
+        # color codes. We strip the codes for the workflow log and
+        # let the script's exit code drive the job status.
+        run: |
+          set -o pipefail
+          bash scripts/parity-check.sh 2>&1 | tee parity-output.txt
+        # If parity-check.sh exits non-zero, this step (and the job) fail.
+        # GitHub will surface the failure on the PR as a red check.
+
+      - name: Highlight failed checks (when parity fails)
+        if: failure()
+        run: |
+          echo "::group::Parity drift detected"
+          echo "The following parity checks failed:"
+          # Print the failing sections in the GitHub Actions UI.
+          # The script writes one '✗' marker per failure; we surface
+          # each as an annotation so they show up inline in the run.
+          grep -n "✗" parity-output.txt | while IFS= read -r line; do
+            # Strip ANSI color codes for readability in the annotation.
+            clean=$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g')
+            echo "::error::$clean"
+          done
+          echo "::endgroup::"
+          echo ""
+          echo "Fix instructions: see CLAUDE.md §'Documentation parity'."
+          echo "The 'Single sources of truth' table tells you which file wins."
+
+      - name: Upload parity log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-output
+          path: parity-output.txt
+          retention-days: 14

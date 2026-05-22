@@ -1,0 +1,43 @@
+{
+  "name": "researcher_agent",
+  "version": "1.0.0",
+  "description": "LLM-driven research assistance framework: end-to-end pipeline from research question through manuscript delivery. 4 skills (research, compose, critique, orchestrate), 24 modes, 24 slash commands. Human-in-the-loop with mandatory checkpoints. CC BY-NC 4.0.",
+  "author": {
+    "name": "Oğuz Gençer",
+    "year": 2026
+  },
+  "license": "CC-BY-NC-4.0",
+  "license_file": "LICENSE",
+  "homepage": "https://github.com/oguzgencer/researcher_agent",
+  "skills": [
+    {
+      "name": "research",
+      "path": "skills/research",
+      "description": "Literature investigation, source verification, synthesis. 7 modes: brief, full, socratic, systematic, verify, annotate, evaluate."
+    },
+    {
+      "name": "compose",
+      "path": "skills/compose",
+      "description": "Manuscript drafting, revision, formatting. 9 modes: full, outline, revision, revision-triage, abstract, lit-section, format, citation-check, disclosure."
+    },
+    {
+      "name": "critique",
+      "path": "skills/critique",
+      "description": "Peer-review-style manuscript critique (simulation, not substitute). 6 modes: full, quick, methodology, re-review, guided, calibration."
+    },
+    {
+      "name": "orchestrate",
+      "path": "skills/orchestrate",
+      "description": "End-to-end pipeline orchestrator. Sequences research, compose, and critique skills across a 10-stage workflow with mandatory checkpoints. 2 modes: pipeline, resume."
+    }
+  ],
+  "commands_dir": "commands",
+  "agents_dir": "agents",
+  "phase": "4 of 4 (feature-complete)",
+  "phases_released": {
+    "1": "research (v0.1.0)",
+    "2": "compose (v0.2.0)",
+    "3": "critique (v0.3.0)",
+    "4": "orchestrate (v1.0.0)"
+  }
+}

@@ -1,0 +1,76 @@
+name: 📖 Documentation issue
+description: A documented claim is wrong, unclear, missing, or out of date
+title: "[docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for flagging this.
+
+        Before submitting, please check whether the issue is **drift between dependent documents**
+        (where one file disagrees with the authoritative source). If yes, the "Single sources of truth"
+        table in [CLAUDE.md](https://github.com/drader/researcher_agent/blob/main/CLAUDE.md) tells you which
+        file should win — the fix is to update the dependent, not the authority.
+
+  - type: dropdown
+    id: nature
+    attributes:
+      label: Nature of the issue
+      options:
+        - Incorrect / inaccurate
+        - Unclear / ambiguous
+        - Out of date (drift from current behaviour)
+        - Missing (something is not documented but should be)
+        - Inconsistent across files
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: file
+    attributes:
+      label: File path
+      description: The primary file affected. Use a repo-relative path.
+      placeholder: "e.g. ARCHITECTURE.md, skills/research/SKILL.md, index.html"
+    validations:
+      required: true
+
+  - type: input
+    id: section
+    attributes:
+      label: Section or line
+      description: |
+        Section heading, line range, or slide number. Helps reviewers find the spot.
+      placeholder: "§ Provenance, or slide 14, or lines 60-72"
+
+  - type: textarea
+    id: what-it-says
+    attributes:
+      label: What the document currently says
+      description: Quote the relevant passage verbatim.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-it-should-say
+    attributes:
+      label: What it should say (and why)
+      description: |
+        Proposed wording or correction.
+        If the issue is inconsistency with another file, name the other file and which one you believe is authoritative per CLAUDE.md.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: parity-impact
+    attributes:
+      label: Parity impact (per CLAUDE.md)
+      description: If accepted, would this also require updating any of the following?
+      options:
+        - label: index.html
+        - label: architecture.html
+        - label: docs/diagrams/*.svg
+        - label: CITATION.cff
+        - label: CHANGELOG.md (counts as a change)
+        - label: One of the registries (MODE_REGISTRY, AGENT_REGISTRY)

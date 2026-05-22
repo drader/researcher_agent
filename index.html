@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>researcher_agent — LLM-driven research assistance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --accent: #818cf8;
+    --accent-dim: #6366f1;
+    --accent-deep: #4f46e5;
+    --accent-muted: #1e1b4b;
+    --accent-glow: rgba(129,140,248,0.18);
+    --bg: #0a0a14;
+    --bg2: #0f0f1e;
+    --bg3: #14142a;
+    --text: #cdd0e8;
+    --text-dim: #6b6f96;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --green: #34d399;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.035) 2px, rgba(0,0,0,0.035) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at top, rgba(99,102,241,0.06), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .deck { width: 100vw; height: 100vh; position: relative; z-index: 1; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 64px 80px; opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+  }
+  .slide.active { opacity: 1; pointer-events: all; }
+
+  .label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 24px; }
+  .label span { color: var(--accent); }
+
+  h1 { font-size: clamp(42px, 6vw, 72px); font-weight: 700; color: var(--accent); line-height: 1.1; text-align: center; letter-spacing: -0.01em; }
+  h2 { font-size: clamp(28px, 4vw, 48px); font-weight: 600; color: var(--accent); line-height: 1.2; margin-bottom: 32px; text-align: center; }
+  h3 { font-size: clamp(18px, 2.5vw, 28px); font-weight: 600; color: var(--text); margin-bottom: 16px; }
+
+  p { font-size: clamp(14px, 1.8vw, 20px); line-height: 1.7; color: var(--text); max-width: 720px; text-align: center; }
+  .sub { font-size: clamp(13px, 1.5vw, 17px); color: var(--text-dim); margin-top: 16px; text-align: center; }
+
+  .terminal {
+    background: var(--bg2); border: 1px solid var(--accent-muted); border-radius: 6px;
+    padding: 28px 32px 24px; font-size: clamp(13px, 1.5vw, 16px); line-height: 1.9;
+    color: var(--text); width: 100%; max-width: 720px;
+    box-shadow: 0 0 50px var(--accent-glow); position: relative;
+  }
+  .terminal::before { content: '● ● ●'; position: absolute; top: 10px; left: 16px; font-size: 10px; color: var(--text-dim); letter-spacing: 6px; }
+  .terminal .prompt { color: var(--accent); }
+  .terminal .cmd { color: var(--text); }
+  .terminal .out { color: var(--text-dim); }
+  .terminal .hi { color: var(--accent); font-weight: 600; }
+  .terminal .warn { color: var(--yellow); }
+  .terminal .err { color: var(--red); }
+  .terminal .ok { color: var(--green); }
+
+  .problem-card { background: var(--bg2); border: 1px solid var(--accent-muted); border-left: 3px solid var(--red); border-radius: 6px; padding: 20px 28px; max-width: 720px; width: 100%; }
+  .problem-card h3 { color: var(--red); margin-bottom: 8px; font-size: clamp(14px, 1.6vw, 18px); letter-spacing: 0.05em; }
+  .problem-card p { text-align: left; max-width: none; font-size: clamp(13px, 1.5vw, 17px); }
+
+  .solution-card { background: var(--bg2); border: 1px solid var(--accent-muted); border-left: 3px solid var(--accent); border-radius: 6px; padding: 20px 28px; max-width: 720px; width: 100%; }
+  .solution-card h3 { color: var(--accent); margin-bottom: 8px; font-size: clamp(14px, 1.6vw, 18px); letter-spacing: 0.05em; }
+  .solution-card p { text-align: left; max-width: none; font-size: clamp(13px, 1.5vw, 17px); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; width: 100%; max-width: 960px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; width: 100%; max-width: 1020px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; width: 100%; max-width: 1080px; }
+
+  .arch-box { background: var(--bg2); border: 1px solid var(--accent-muted); border-radius: 6px; padding: 20px 24px; text-align: left; }
+  .arch-box .arch-title { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; border-bottom: 1px solid var(--accent-muted); padding-bottom: 10px; }
+  .arch-box ul { list-style: none; }
+  .arch-box li { font-size: clamp(12px, 1.3vw, 15px); color: var(--text-dim); padding: 4px 0; }
+  .arch-box li::before { content: '— '; color: var(--accent); }
+  .arch-box li span { color: var(--text); }
+
+  .skill-card { background: var(--bg2); border: 1px solid var(--accent-muted); border-radius: 6px; padding: 22px 24px; text-align: left; transition: border-color 0.2s, transform 0.2s; }
+  .skill-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .skill-card .skill-name { color: var(--accent); font-size: clamp(16px, 2vw, 22px); font-weight: 700; margin-bottom: 4px; }
+  .skill-card .skill-modes { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; }
+  .skill-card p { font-size: clamp(12px, 1.3vw, 14px); text-align: left; max-width: none; line-height: 1.6; color: var(--text); }
+  .skill-card .skill-list { margin-top: 12px; font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
+  .skill-card .skill-list span { color: var(--accent); }
+
+  .tier-table { width: 100%; max-width: 820px; border-collapse: collapse; }
+  .tier-table th { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); text-align: left; padding: 8px 14px; border-bottom: 1px solid var(--accent-muted); }
+  .tier-table td { font-size: clamp(12px, 1.4vw, 15px); color: var(--text); padding: 9px 14px; border-bottom: 1px solid rgba(30,27,75,0.5); vertical-align: top; }
+  .tier-table td:first-child { color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .tier-table td.dim { color: var(--text-dim); }
+  .tier-table td.gen { color: #c4b5fd; }
+  .tier-table td.hyb { color: var(--text); }
+  .tier-table td.ana { color: #67e8f9; }
+
+  .divider { width: 48px; height: 2px; background: var(--accent); margin: 24px auto; box-shadow: 0 0 12px var(--accent); }
+
+  .big-number { font-size: clamp(56px, 9vw, 110px); font-weight: 700; color: var(--accent); line-height: 1; text-shadow: 0 0 40px rgba(129,140,248,0.4); }
+
+  .cursor::after { content: '_'; animation: blink 1s step-end infinite; color: var(--accent); }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .problem-wall { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 860px; }
+  .wall-item { background: var(--bg2); border: 1px solid rgba(248,113,113,0.22); border-radius: 6px; padding: 18px 22px; }
+  .wall-item .wall-num { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--red); margin-bottom: 8px; opacity: 0.75; }
+  .wall-item h3 { color: var(--text); font-size: clamp(14px, 1.6vw, 18px); margin-bottom: 6px; }
+  .wall-item p { font-size: clamp(12px, 1.3vw, 14px); color: var(--text-dim); text-align: left; max-width: none; line-height: 1.55; }
+
+  .flow { display: flex; align-items: center; gap: 14px; font-size: clamp(12px, 1.4vw, 16px); flex-wrap: wrap; justify-content: center; }
+  .flow-box { background: var(--bg2); border: 1px solid var(--accent-muted); border-radius: 4px; padding: 10px 18px; text-align: center; white-space: nowrap; }
+  .flow-box.active { border-color: var(--accent); background: rgba(99,102,241,0.12); }
+  .flow-box .flow-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .flow-box .flow-name { color: var(--accent); font-weight: 600; margin-top: 2px; }
+  .flow-arrow { color: var(--accent-dim); font-size: 18px; }
+
+  .pipeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-width: 1000px; }
+  .pipeline-stage { background: var(--bg2); border: 1px solid var(--accent-muted); border-radius: 5px; padding: 12px 12px; text-align: left; position: relative; }
+  .pipeline-stage .stage-num { font-size: 10px; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 4px; }
+  .pipeline-stage .stage-name { font-size: clamp(11px, 1.2vw, 13px); color: var(--text); font-weight: 600; }
+  .pipeline-stage .stage-skill { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+  .pipeline-stage.gate::after { content: '◆'; position: absolute; top: 8px; right: 10px; color: var(--yellow); font-size: 11px; }
+
+  .progress { position: fixed; bottom: 0; left: 0; right: 0; height: 2px; background: var(--accent-muted); z-index: 500; }
+  .progress-bar { height: 100%; background: var(--accent); box-shadow: 0 0 8px var(--accent); transition: width 0.35s ease; }
+  .slide-counter { position: fixed; bottom: 20px; right: 28px; font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; z-index: 500; }
+  .slide-counter span { color: var(--accent); }
+  .nav-hint { position: fixed; bottom: 20px; left: 28px; font-size: 11px; color: var(--text-dim); letter-spacing: 0.08em; z-index: 500; }
+
+  .glow-line { width: 100%; max-width: 720px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); margin: 28px 0; opacity: 0.5; }
+  .title-tag { display: inline-block; border: 1px solid var(--accent-muted); color: var(--text-dim); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; padding: 5px 14px; border-radius: 20px; margin-bottom: 32px; }
+  .badge { display: inline-block; background: var(--accent-muted); color: var(--accent); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 10px; border-radius: 3px; margin-right: 8px; }
+  .stack-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 14px; }
+  .stack-item { background: var(--bg3); border: 1px solid var(--accent-muted); border-radius: 4px; padding: 7px 16px; font-size: clamp(12px, 1.3vw, 15px); color: var(--text-dim); }
+  .stack-item span { color: var(--accent); }
+
+  .nav-bar { position: fixed; top: 14px; left: 16px; z-index: 2000; display: flex; gap: 8px; }
+  .nav-link { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); text-decoration: none; padding: 5px 12px; border: 1px solid var(--accent-muted); border-radius: 3px; background: rgba(10,10,20,0.85); backdrop-filter: blur(6px); transition: color 0.15s, border-color 0.15s; }
+  .nav-link:hover { color: var(--accent); border-color: var(--accent); }
+  .nav-link.active { color: var(--accent); border-color: var(--accent); }
+
+  .key-row { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; align-items: center; margin-top: 18px; font-size: clamp(12px, 1.4vw, 15px); color: var(--text-dim); }
+  .key-row .k { color: var(--accent); font-weight: 600; }
+
+  .principle-list { width: 100%; max-width: 760px; text-align: left; }
+  .principle-list .principle { padding: 12px 18px; border-left: 2px solid var(--accent-muted); margin-bottom: 12px; }
+  .principle-list .principle .p-num { color: var(--accent); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; }
+  .principle-list .principle .p-name { color: var(--text); font-size: clamp(14px, 1.6vw, 17px); font-weight: 600; margin: 4px 0; }
+  .principle-list .principle .p-body { color: var(--text-dim); font-size: clamp(12px, 1.3vw, 14px); line-height: 1.55; }
+
+  .diagram { width: 100%; max-width: 1040px; border: 1px solid var(--accent-muted); border-radius: 6px; box-shadow: 0 0 40px var(--accent-glow); background: var(--bg2); display: block; }
+  .diagram-wide { max-width: 1100px; }
+</style>
+</head>
+<body>
+
+<div class="nav-bar">
+  <a href="index.html" class="nav-link active">index</a>
+  <a href="architecture.html" class="nav-link">architecture</a>
+</div>
+
+<div class="deck">
+
+  <!-- SLIDE 1: TITLE -->
+  <div class="slide active" id="s1">
+    <div class="title-tag">v1.0.0 · CC BY-NC 4.0</div>
+    <h1>researcher_agent</h1>
+    <div class="divider"></div>
+    <p style="font-size:clamp(16px,2.2vw,24px); color:var(--text-dim);">
+      LLM-driven research assistance framework
+    </p>
+    <p class="sub" style="margin-top:32px;">
+      Structured workflows for literature → manuscript → review → revision.<br>
+      Source-grounded. Human-in-the-loop. Limited revision loops.
+    </p>
+    <div class="glow-line" style="margin-top:48px;"></div>
+    <p class="sub">
+      <span style="color:var(--accent);">4 skills</span> &nbsp;·&nbsp;
+      <span style="color:var(--accent);">24 modes</span> &nbsp;·&nbsp;
+      <span style="color:var(--accent);">21 sub-agent personas</span>
+    </p>
+  </div>
+
+  <!-- SLIDE 2: THE PROMISE -->
+  <div class="slide" id="s2">
+    <div class="label">The promise</div>
+    <h2>A research assistant<br>that won't betray you.</h2>
+    <div class="terminal" style="margin-top:24px;">
+      <br>
+      <div><span class="prompt">$ </span><span class="cmd">claude /research-systematic</span></div>
+      <div class="out">&nbsp;</div>
+      <div class="out"># PRISMA 2020 workflow boots</div>
+      <div class="out"># Scope confirmation requested ...</div>
+      <div><span class="prompt">›</span> <span class="cmd">stochastic SNNs for low-power inference, 2020–2025</span></div>
+      <div class="out">&nbsp;</div>
+      <div class="hi">✓ search strategy drafted (4 databases, 12 query strings)</div>
+      <div class="out warn">⚠ awaiting your approval before executing searches</div>
+      <div class="out">&nbsp;</div>
+      <div class="out"># No fabricated citations. No silent ambiguity.</div>
+      <div class="out"># No hidden AI. Just structure where it helps.</div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: THE FOUR WALLS -->
+  <div class="slide" id="s3">
+    <div class="label">The reality</div>
+    <h2 style="margin-bottom:28px;">Every LLM-assisted writer<br>hits the same four walls.</h2>
+    <div class="problem-wall">
+      <div class="wall-item">
+        <div class="wall-num">Problem 01</div>
+        <h3>Citation hallucination</h3>
+        <p>The model fabricates plausible-looking references. Authors, titles, DOIs that don't exist. Catastrophic at submission time.</p>
+      </div>
+      <div class="wall-item">
+        <div class="wall-num">Problem 02</div>
+        <h3>Generic LLM prose</h3>
+        <p>Every output drifts toward the same hedged, mid-register register. Your voice disappears. So does the argument's edge.</p>
+      </div>
+      <div class="wall-item">
+        <div class="wall-num">Problem 03</div>
+        <h3>Hidden AI use</h3>
+        <p>Venues now require AI disclosure, but the tools don't help you write it. You either over-disclose, under-disclose, or guess.</p>
+      </div>
+      <div class="wall-item">
+        <div class="wall-num">Problem 04</div>
+        <h3>Endless revision</h3>
+        <p>One more pass, then one more, then five more. No stopping rule. The doc keeps shifting and nothing converges.</p>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:24px;">researcher_agent answers each one explicitly.</p>
+  </div>
+
+  <!-- SLIDE 4: PROBLEM 1 -->
+  <div class="slide" id="s4">
+    <div class="label"><span>Problem 01</span> — Citation hallucination</div>
+    <h2>The references look right.<br>Half of them aren't real.</h2>
+    <div class="problem-card" style="margin-top:24px;">
+      <h3>The situation</h3>
+      <p>You ask an LLM for a literature review. It returns confident paragraphs with confident citations. A reviewer checks one of the DOIs. The paper doesn't exist. Another author was never at that venue. A third citation is real but says the opposite of what was claimed. Every output becomes a fact-check job — defeating the point of using assistance at all.</p>
+    </div>
+    <div class="solution-card" style="margin-top:16px;">
+      <h3>The fix</h3>
+      <p>Every factual claim in any produced artefact must be anchored to one of three sources: (1) a cited external source <span style="color:var(--accent)">with a locator</span> — page, section, paragraph; (2) a user-supplied input; (3) a framework-internal computation, explicitly marked. Claims with no anchor become <span style="color:var(--accent)">&lt;unverified&gt;</span> in a notes section. The <span style="color:var(--accent)">research-verify</span> mode runs claim-by-claim, returning a structured verdict for each.</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: VERIFY DIAGRAM -->
+  <div class="slide" id="s5">
+    <div class="label"><span>Solution 01</span> — research-verify</div>
+    <h2 style="font-size:clamp(20px,2.8vw,36px); margin-bottom:28px;">Every claim. One source. One verdict.</h2>
+    <div class="terminal">
+      <br>
+      <div><span class="prompt">$ </span><span class="cmd">claude /research-verify draft.md</span></div>
+      <div class="out">&nbsp;</div>
+      <div class="out"># Parsing claims ...</div>
+      <div class="hi">  → 47 factual claims identified</div>
+      <div class="out">&nbsp;</div>
+      <div class="out"># For each claim: locate in cited source, verify support</div>
+      <div class="out">&nbsp;</div>
+      <div><span class="ok">  ✓ Verified         </span><span class="cmd">  31  source supports as stated</span></div>
+      <div><span class="warn">  ◐ Partially        </span><span class="cmd">   8  source supports a weaker version</span></div>
+      <div><span class="err">  ✗ Unsupported      </span><span class="cmd">   5  source does not address the claim</span></div>
+      <div><span class="err">  ✗ Contradicted     </span><span class="cmd">   3  source states the opposite</span></div>
+      <div class="out">&nbsp;</div>
+      <div class="hi">→ verification-report.md (47 entries, locators included)</div>
+      <div class="out"># Will not silently fix the text. Reports only.</div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: PROBLEM 2 -->
+  <div class="slide" id="s6">
+    <div class="label"><span>Problem 02</span> — Generic LLM prose</div>
+    <h2>Every output sounds<br>like every other output.</h2>
+    <div class="problem-card" style="margin-top:24px;">
+      <h3>The situation</h3>
+      <p>Default LLM register is hedged, smooth, average. It is what comes out when you ask for "a literature review" without parameterizing how. A Socratic exploration of an unfamiliar topic and a Methods-section draft for a known result deserve <span style="color:var(--accent)">different cognitive postures</span> — but the tool gives you the same one. Worse, the helpfulness training pushes every output toward consensus, smoothing exactly the disagreements that make the literature interesting.</p>
+    </div>
+    <div class="solution-card" style="margin-top:16px;">
+      <h3>The fix</h3>
+      <p>Each skill exposes <span style="color:var(--accent)">modes</span> along a spectrum: <span style="color:#c4b5fd;">Generative</span> (encourages your thinking, refuses to give you the answer), <span style="color:var(--text);">Hybrid</span> (mixed default), <span style="color:#67e8f9;">Analytic</span> (precise, low-creativity, high-accuracy output). 24 modes total. The mode you pick determines what the system <span style="color:var(--accent)">won't</span> do — Generative modes refuse to deliver finished prose; Analytic modes refuse to elaborate beyond the verifiable.</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: SPECTRUM -->
+  <div class="slide" id="s7">
+    <div class="label"><span>Solution 02</span> — Mode spectrum</div>
+    <h2 style="font-size:clamp(20px,2.8vw,36px); margin-bottom:32px;">Three postures. One framework.</h2>
+    <table class="tier-table">
+      <tr>
+        <th>Bias</th>
+        <th>What it does</th>
+        <th>What it refuses</th>
+      </tr>
+      <tr>
+        <td class="gen">Generative</td>
+        <td>Surfaces questions. Probes assumptions. Generates counter-arguments.</td>
+        <td class="dim">Will not hand you the answer.</td>
+      </tr>
+      <tr>
+        <td>Hybrid</td>
+        <td>Mixes synthesis with checkpoints. Default for most production work.</td>
+        <td class="dim">Will not run unattended on judgment calls.</td>
+      </tr>
+      <tr>
+        <td class="ana">Analytic</td>
+        <td>Reports facts. Verifies claims. Audits citations. Formats output.</td>
+        <td class="dim">Will not elaborate or interpret beyond the evidence.</td>
+      </tr>
+    </table>
+    <p class="sub" style="margin-top:28px; max-width:720px;">
+      <span style="color:var(--text);">research-socratic</span> probes your question without writing it for you.
+      <span style="color:var(--text);">research-systematic</span> runs PRISMA with multiple gates.
+      <span style="color:var(--text);">compose-format</span> converts files without touching the argument.
+      Same framework, three postures, no wasted moves.
+    </p>
+  </div>
+
+  <!-- SLIDE 8: PROBLEM 3 -->
+  <div class="slide" id="s8">
+    <div class="label"><span>Problem 03</span> — Hidden AI use</div>
+    <h2>The disclosure statement<br>is now part of the paper.</h2>
+    <div class="problem-card" style="margin-top:24px;">
+      <h3>The situation</h3>
+      <p>Most major venues now require explicit AI-assistance disclosure. Some want a methods-section paragraph, others a footnote, others a specific cover-letter line. Each policy is slightly different. The tools you used to draft the paper don't tell you what they did, when, or how to describe it. You end up either over-disclosing (writing "AI was used throughout" out of caution) or under-disclosing (writing nothing and hoping). Neither is honest.</p>
+    </div>
+    <div class="solution-card" style="margin-top:16px;">
+      <h3>The fix</h3>
+      <p><span style="color:var(--accent)">compose-disclosure</span> is a first-class mode. It generates venue-specific AI-assistance statements: which skills ran, what they produced, what the human did, what the human approved. Cross-reference to the project's pipeline-logbook for auditability. The framework's design principle is <span style="color:var(--accent)">transparency over deception</span> — it helps you produce better work and document where AI assisted, not conceal it.</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: DISCLOSURE TERMINAL -->
+  <div class="slide" id="s9">
+    <div class="label"><span>Solution 03</span> — compose-disclosure</div>
+    <h2 style="font-size:clamp(20px,2.8vw,36px); margin-bottom:28px;">Venue-specific. Audit-ready.</h2>
+    <div class="terminal">
+      <br>
+      <div><span class="prompt">$ </span><span class="cmd">claude /compose-disclosure --venue=neurips</span></div>
+      <div class="out">&nbsp;</div>
+      <div class="out"># Loading pipeline-logbook.json ...</div>
+      <div class="hi">  → 4 skill invocations recorded (research × 2, compose × 1, critique × 1)</div>
+      <div class="hi">  → 6 mandatory gates, all human-approved</div>
+      <div class="hi">  → 18 citations verified against sources</div>
+      <div class="out">&nbsp;</div>
+      <div class="out"># Drafting NeurIPS 2026 § "Use of LLMs" statement ...</div>
+      <div class="out">&nbsp;</div>
+      <div class="hi">✓ disclosure-statement.md  (146 words, NeurIPS format)</div>
+      <div class="ok">  Author wrote, reviewed, and approved every claim.</div>
+      <div class="ok">  Literature scan: structured search via research-systematic.</div>
+      <div class="ok">  Prose drafting: outline + compose-full, then human edit.</div>
+      <div class="ok">  Citation accuracy: research-verify, all sources located.</div>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: PROBLEM 4 -->
+  <div class="slide" id="s10">
+    <div class="label"><span>Problem 04</span> — Endless revision</div>
+    <h2>One more pass. Then one more.<br>The doc never lands.</h2>
+    <div class="problem-card" style="margin-top:24px;">
+      <h3>The situation</h3>
+      <p>Each revision cycle reopens decisions you thought were closed. The model's "let me improve this" suggestions become "let me rewrite this entirely". Issues raised in pass 3 contradict fixes from pass 1. You lose track of what's been considered, what's been deferred, what's actually settled. Eventually you ship something out of exhaustion rather than completion.</p>
+    </div>
+    <div class="solution-card" style="margin-top:16px;">
+      <h3>The fix</h3>
+      <p><span style="color:var(--accent)">Maximum two revision loops per deliverable.</span> Issues unresolved after the second pass don't get silently re-worked — they are recorded as <span style="color:var(--accent)">Unresolved Issues</span> attached to the deliverable. The author sees exactly what was raised, what was fixed, what was deferred and why. Closure replaces drift.</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: TWO-LOOP DIAGRAM -->
+  <div class="slide" id="s11">
+    <div class="label"><span>Solution 04</span> — Two loops, then Unresolved Issues</div>
+    <h2 style="font-size:clamp(20px,2.8vw,36px); margin-bottom:24px;">A stopping rule the model can't argue with.</h2>
+    <img src="docs/diagrams/two-loops.svg" alt="Two-loop revision cap: draft v0 to v1 to v2 through at most two revision passes; issues unresolved after v2 are recorded as Unresolved Issues rather than silently re-worked." class="diagram" style="max-width:880px;">
+  </div>
+
+  <!-- SLIDE 12: ARCHITECTURE -->
+  <div class="slide" id="s12">
+    <div class="label">Architecture</div>
+    <h2 style="font-size:clamp(20px,2.8vw,36px); margin-bottom:28px;">Skills · sub-agents · slash commands · references</h2>
+    <div class="grid-3">
+      <div class="arch-box">
+        <div class="arch-title">Skill layer</div>
+        <ul>
+          <li><span>research</span></li>
+          <li><span>compose</span></li>
+          <li><span>critique</span></li>
+          <li><span>orchestrate</span></li>
+          <li>&nbsp;</li>
+          <li>SKILL.md + modes</li>
+          <li>references/ + templates/</li>
+        </ul>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">Sub-agent layer</div>
+        <ul>
+          <li><span>question-formulator</span></li>
+          <li><span>source-searcher</span></li>
+          <li><span>source-verifier</span></li>
+          <li><span>bias-assessor</span></li>
+          <li><span>synthesizer</span></li>
+          <li><span>devil-advocate</span></li>
+          <li><span>report-compiler</span></li>
+        </ul>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">Command layer</div>
+        <ul>
+          <li><span>/research-socratic</span></li>
+          <li><span>/research-systematic</span></li>
+          <li><span>/research-verify</span></li>
+          <li><span>/compose-full</span></li>
+          <li><span>/compose-disclosure</span></li>
+          <li><span>/critique-full</span></li>
+          <li><span>/orchestrate-pipeline</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:28px;">
+      Discoverable by Claude Code via <span style="color:var(--accent);">.claude/skills/</span>, <span style="color:var(--accent);">.claude/agents/</span>, <span style="color:var(--accent);">.claude/commands/</span>.<br>
+      Install once at user level, or symlink per project.
+    </p>
+  </div>
+
+  <!-- SLIDE 13: THE 4 SKILLS -->
+  <div class="slide" id="s13">
+    <div class="label">Skill matrix</div>
+    <h2 style="margin-bottom:28px;">Four skills. Twenty-four modes.</h2>
+    <div class="grid-4">
+      <div class="skill-card">
+        <div class="skill-name">research</div>
+        <div class="skill-modes">7 modes</div>
+        <p>Literature investigation, source verification, synthesis.</p>
+        <div class="skill-list">
+          <span>›</span> brief<br>
+          <span>›</span> full<br>
+          <span>›</span> socratic<br>
+          <span>›</span> systematic<br>
+          <span>›</span> verify<br>
+          <span>›</span> annotate<br>
+          <span>›</span> evaluate
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-name">compose</div>
+        <div class="skill-modes">9 modes</div>
+        <p>Manuscript drafting, revision, formatting, disclosure.</p>
+        <div class="skill-list">
+          <span>›</span> full<br>
+          <span>›</span> outline<br>
+          <span>›</span> revision<br>
+          <span>›</span> revision-triage<br>
+          <span>›</span> abstract<br>
+          <span>›</span> lit-section<br>
+          <span>›</span> format<br>
+          <span>›</span> citation-check<br>
+          <span>›</span> disclosure
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-name">critique</div>
+        <div class="skill-modes">6 modes</div>
+        <p>Peer-review-style manuscript critique.</p>
+        <div class="skill-list">
+          <span>›</span> full<br>
+          <span>›</span> quick<br>
+          <span>›</span> methodology<br>
+          <span>›</span> re-review<br>
+          <span>›</span> guided<br>
+          <span>›</span> calibration
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-name">orchestrate</div>
+        <div class="skill-modes">2 modes</div>
+        <p>End-to-end pipeline across the other three.</p>
+        <div class="skill-list">
+          <span>›</span> pipeline<br>
+          <span>›</span> resume<br>
+          &nbsp;<br>
+          <span style="color:var(--text-dim);">10 stages</span><br>
+          <span style="color:var(--text-dim);">4 mandatory gates</span><br>
+          <span style="color:var(--text-dim);">pipeline-logbook</span><br>
+          <span style="color:var(--text-dim);">resumable</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 14: PIPELINE -->
+  <div class="slide" id="s14">
+    <div class="label">orchestrate-pipeline</div>
+    <h2 style="font-size:clamp(20px,2.8vw,36px); margin-bottom:24px;">End-to-end. Ten stages. Six gates.</h2>
+    <img src="docs/diagrams/pipeline.svg" alt="orchestrate-pipeline: ten stages from scope through disclosure. Six mandatory human-approval gates after stages 1, 3, 4, 6, 8, and 9. Every stage writes to pipeline-logbook.json." class="diagram diagram-wide">
+    <p class="sub" style="margin-top:22px;">
+      Every gate <span style="color:var(--yellow);">◆</span> requires explicit approval. Crash, close the terminal,<br>
+      resume next week with <span style="color:var(--accent);">/orchestrate-resume</span>.
+    </p>
+  </div>
+
+  <!-- SLIDE 15: PRINCIPLES -->
+  <div class="slide" id="s15">
+    <div class="label">Design principles</div>
+    <h2 style="margin-bottom:28px;">Five rules. Non-negotiable.</h2>
+    <div class="principle-list">
+      <div class="principle">
+        <div class="p-num">Principle 01</div>
+        <div class="p-name">Source-grounded</div>
+        <div class="p-body">Every factual claim traces to a cited source with a locator. No fabricated citations. Missing sources are flagged, not papered over.</div>
+      </div>
+      <div class="principle">
+        <div class="p-num">Principle 02</div>
+        <div class="p-name">Human-in-the-loop</div>
+        <div class="p-body">Major decisions (scope, methodology, inclusion criteria, final outputs) are presented for explicit approval. The framework will not silently resolve ambiguity.</div>
+      </div>
+      <div class="principle">
+        <div class="p-num">Principle 03</div>
+        <div class="p-name">Limited revision loops</div>
+        <div class="p-body">At most two revision passes per deliverable. Issues unresolved after the second pass are recorded under Unresolved Issues rather than hidden.</div>
+      </div>
+      <div class="principle">
+        <div class="p-num">Principle 04</div>
+        <div class="p-name">Transparency over deception</div>
+        <div class="p-body">The framework helps you produce better work and document where AI assisted. It does not help you conceal AI involvement; an explicit disclosure mode is provided.</div>
+      </div>
+      <div class="principle">
+        <div class="p-num">Principle 05</div>
+        <div class="p-name">Voice fidelity</div>
+        <div class="p-body">Mode parameters can be set so produced prose stays closer to your prior writing style (when example text is provided), rather than defaulting to a generic LLM register.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 16: STATUS / LICENSE -->
+  <div class="slide" id="s16">
+    <div class="label">Status</div>
+    <div class="big-number">v1.0.0</div>
+    <p class="sub" style="margin-top:14px;">Feature-complete. Released 2026-05-21.</p>
+    <div class="key-row" style="margin-top:36px;">
+      <span><span class="k">4</span> skills</span>
+      <span><span class="k">24</span> modes</span>
+      <span><span class="k">24</span> slash commands</span>
+      <span><span class="k">21</span> sub-agents</span>
+      <span><span class="k">16</span> reference docs</span>
+      <span><span class="k">19</span> templates</span>
+      <span><span class="k">6</span> worked examples</span>
+    </div>
+    <div class="glow-line" style="margin-top:36px;"></div>
+    <p class="sub" style="margin-top:18px;">
+      <span style="color:var(--accent);">CC BY-NC 4.0</span> &nbsp;·&nbsp; © 2026 Oğuz Gençer
+    </p>
+    <p class="sub" style="margin-top:12px; max-width:640px;">
+      ✓ Personal academic work · teaching · non-profit research.
+      &nbsp;✗ Commercial SaaS · paid services · for-profit revenue-generating use.
+    </p>
+  </div>
+
+  <!-- SLIDE 17: GET STARTED -->
+  <div class="slide" id="s17">
+    <div class="label">Get started</div>
+    <h2 style="margin-bottom:28px;">Two commands.</h2>
+    <div class="terminal" style="max-width:660px;">
+      <br>
+      <div class="out"># Clone to a stable canonical location</div>
+      <div><span class="prompt">$ </span><span class="cmd">git clone github.com/drader/researcher_agent ~/researcher_agent</span></div>
+      <div class="out">&nbsp;</div>
+      <div class="out"># Symlink for all projects, user-level</div>
+      <div><span class="prompt">$ </span><span class="cmd">ln -s ~/researcher_agent/skills/* ~/.claude/skills/</span></div>
+      <div><span class="prompt">$ </span><span class="cmd">ln -s ~/researcher_agent/commands/*.md ~/.claude/commands/</span></div>
+      <div class="out">&nbsp;</div>
+      <div class="hi">✓ 4 skills registered</div>
+      <div class="hi">✓ 24 slash commands available</div>
+      <div class="hi">✓ 21 sub-agent personas ready</div>
+      <div class="out">&nbsp;</div>
+      <div class="out"># In any Claude Code session:</div>
+      <div><span class="prompt">/research-socratic</span></div>
+      <div class="out cursor">&nbsp;</div>
+    </div>
+    <div class="stack-row" style="margin-top:32px;">
+      <div class="stack-item"><span>repo · </span>github.com/drader/researcher_agent</div>
+      <div class="stack-item"><span>docs · </span>ARCHITECTURE.md · MODE_REGISTRY.md</div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+<div class="slide-counter"><span id="currentSlide">1</span> / <span id="totalSlides"></span></div>
+<div class="nav-hint">← → arrow keys &nbsp;·&nbsp; space</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  document.getElementById('totalSlides').textContent = total;
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(total - 1, n));
+    slides[current].classList.add('active');
+    document.getElementById('currentSlide').textContent = current + 1;
+    document.getElementById('progressBar').style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                     { e.preventDefault(); goTo(current - 1); }
+    if (e.key === 'Home') goTo(0);
+    if (e.key === 'End')  goTo(total - 1);
+  });
+
+  let touchX = 0;
+  document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) goTo(dx < 0 ? current + 1 : current - 1);
+  });
+
+  goTo(0);
+</script>
+</body>
+</html>

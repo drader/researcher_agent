@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security vulnerability
+    url: https://github.com/drader/researcher_agent/security/advisories/new
+    about: |
+      Please do not open a public Issue for a security report.
+      Use GitHub's private vulnerability reporting. See SECURITY.md for scope and what to expect.
+  - name: 💬 Question or open discussion
+    url: https://github.com/drader/researcher_agent/discussions
+    about: |
+      For questions, design discussions, "how would I…" prompts, or anything that isn't a concrete bug,
+      proposal, source-grounding failure, or documentation issue, open a Discussion instead.

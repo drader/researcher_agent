@@ -1,0 +1,94 @@
+name: ✨ Mode or skill proposal
+description: Propose a new mode, new skill, or new sub-agent persona
+title: "[proposal]: "
+labels: ["proposal", "discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for thinking about how to extend the framework.
+        Before submitting, please skim [POSITIONING.md](https://github.com/drader/researcher_agent/blob/main/POSITIONING.md) for what's in scope, and [CONTRIBUTING.md](https://github.com/drader/researcher_agent/blob/main/CONTRIBUTING.md) for the contribution flow.
+
+        For open-ended ideas that aren't ready for a concrete proposal, a [Discussion](https://github.com/drader/researcher_agent/discussions) is the better starting place.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of proposal
+      description: What are you proposing to add?
+      options:
+        - New mode in an existing skill
+        - New skill
+        - New sub-agent persona
+        - New slash command (variant of an existing mode)
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: Proposed name
+      description: Use kebab-case. For modes, follow the existing naming.
+      placeholder: "e.g. critique-replication or research-meta-analysis"
+    validations:
+      required: true
+
+  - type: input
+    id: parent
+    attributes:
+      label: Parent skill (if applicable)
+      description: For modes and personas. Leave blank if proposing a new skill.
+      placeholder: "e.g. research"
+
+  - type: dropdown
+    id: spectrum
+    attributes:
+      label: Spectrum bias (for modes)
+      description: Where does this mode sit on the Generative ↔ Hybrid ↔ Analytic spectrum?
+      options:
+        - Generative
+        - Hybrid
+        - Analytic
+        - Not applicable (not a mode)
+
+  - type: textarea
+    id: gap
+    attributes:
+      label: What gap does this fill?
+      description: |
+        Be concrete. Describe a real workflow this would unlock.
+        If an existing mode/skill/persona almost does this, explain why "almost" isn't enough.
+    validations:
+      required: true
+
+  - type: textarea
+    id: role
+    attributes:
+      label: Proposed role / deliverable
+      description: |
+        For a mode: the deliverable it produces and its oversight level.
+        For a skill: the workflows it owns.
+        For a persona: the single role-boundary description.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: |
+        Existing modes/skills/personas you considered and discarded.
+        "Just use mode X" is the most common response to a proposal; address it preemptively.
+
+  - type: checkboxes
+    id: registry-impact
+    attributes:
+      label: Registry impact (per CLAUDE.md)
+      description: What canonical files would the implementation need to update?
+      options:
+        - label: MODE_REGISTRY.md
+        - label: AGENT_REGISTRY.md
+        - label: ARCHITECTURE.md
+        - label: README.md + HTML report pages
+        - label: SKILL.md of the parent skill

@@ -1,0 +1,20 @@
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+.env
+.env.local
+node_modules/
+dist/
+build/
+*.log
+
+# project-local Claude Code artefacts (when this repo is used as a target)
+.claude/skills/
+.claude/commands/
+.claude/agents/
+!.claude-plugin/

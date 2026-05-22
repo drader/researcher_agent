@@ -1,0 +1,98 @@
+name: 📚 Source-grounding failure
+description: The framework produced an output that violates its source-grounding contract
+title: "[grounding]: "
+labels: ["grounding", "high-priority"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Before submitting
+
+        This template is for **failures of the framework's core source-grounding contract**:
+
+        - A fabricated citation that wasn't flagged as `<unverified>`.
+        - An AI-disclosure statement that misrepresents what was actually run.
+        - A claim in a deliverable with no anchor in the provenance log.
+        - `research-verify` returning a verdict that contradicts the cited source.
+
+        ⚠ **If the failure could be weaponised** (a path that lets a user deliberately produce
+        fabricated citations, bypass disclosure, etc.), this is a **security issue**, not a public
+        bug report. Please use [private vulnerability reporting](https://github.com/drader/researcher_agent/security/advisories/new) instead. See [SECURITY.md](https://github.com/drader/researcher_agent/blob/main/SECURITY.md) for scope.
+
+  - type: checkboxes
+    id: security-check
+    attributes:
+      label: Confirmation
+      description: Confirm this is not a deliberate-bypass vulnerability.
+      options:
+        - label: I have read SECURITY.md and confirmed this is an accidental failure, not an exploit path.
+          required: true
+
+  - type: dropdown
+    id: failure-type
+    attributes:
+      label: Failure type
+      options:
+        - Fabricated citation passed through
+        - Citation cited a real source but mischaracterised it
+        - Forged locator (page/section that does not exist)
+        - <unverified> flag missing where it should have been applied
+        - AI-disclosure statement omitted a step that ran
+        - AI-disclosure statement claimed a step that didn't run
+        - Provenance log has a claim with no anchor
+        - Other (describe below)
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: mode
+    attributes:
+      label: Mode / skill that produced the output
+      description: e.g. `research-full`, `compose-revision`, `orchestrate-pipeline at stage 5`
+    validations:
+      required: true
+
+  - type: textarea
+    id: input
+    attributes:
+      label: Input that triggered the failure
+      description: |
+        The exact prompt or input artefact. Paraphrase only if the original is confidential;
+        if you paraphrase, keep the structure so reproduction is possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output (verbatim)
+      description: |
+        The verbatim text where the grounding failure appears.
+        Highlight the specific span (claim, citation, locator) that is wrong.
+    validations:
+      required: true
+
+  - type: textarea
+    id: ground-truth
+    attributes:
+      label: Ground truth
+      description: |
+        What the cited source actually says, or why the framework should have known better.
+        Link to the source if possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: stated-guarantee
+    attributes:
+      label: Stated guarantee that was violated
+      description: Quote or cite the relevant line in ARCHITECTURE.md, the relevant SKILL.md, or a Principle.
+
+  - type: input
+    id: framework-version
+    attributes:
+      label: researcher_agent version
+      placeholder: "v1.0.0"
+    validations:
+      required: true

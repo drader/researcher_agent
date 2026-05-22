@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 320" font-family="'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace" role="img" aria-labelledby="title desc">
+  <title id="title">Two-loop revision cap with Unresolved Issues</title>
+  <desc id="desc">A deliverable moves from draft v0 to v1 to v2 through at most two revision passes. Issues unresolved after v2 are recorded as Unresolved Issues rather than silently re-worked.</desc>
+
+  <defs>
+    <marker id="arrI" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1"/>
+    </marker>
+    <marker id="arrY" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+    </marker>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#14142a"/>
+      <stop offset="100%" stop-color="#0f0f1e"/>
+    </linearGradient>
+    <linearGradient id="bgY" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f1a0a"/>
+      <stop offset="100%" stop-color="#1a1505"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1000" height="320" fill="#0a0a14"/>
+
+  <!-- header -->
+  <text x="40" y="38" fill="#6b6f96" font-size="10" letter-spacing="3">REVISION CAP</text>
+  <text x="40" y="60" fill="#818cf8" font-size="18" font-weight="700">Two loops. Then closure.</text>
+
+  <!-- stages -->
+  <g transform="translate(40,110)">
+    <!-- v0 -->
+    <g>
+      <rect width="180" height="100" rx="6" fill="url(#bg)" stroke="#818cf8" stroke-width="1.5"/>
+      <text x="20" y="28" fill="#6b6f96" font-size="10" letter-spacing="1">DRAFT</text>
+      <text x="20" y="60" fill="#818cf8" font-size="24" font-weight="700">v0</text>
+      <text x="20" y="84" fill="#cdd0e8" font-size="11">initial output</text>
+    </g>
+    <path d="M 180 50 L 230 50" stroke="#6366f1" stroke-width="1.5" fill="none" marker-end="url(#arrI)"/>
+    <text x="190" y="40" fill="#6b6f96" font-size="9" letter-spacing="1">REV 1</text>
+
+    <!-- v1 -->
+    <g transform="translate(230,0)">
+      <rect width="180" height="100" rx="6" fill="url(#bg)" stroke="#818cf8" stroke-width="1.5"/>
+      <text x="20" y="28" fill="#6b6f96" font-size="10" letter-spacing="1">REVISION 1</text>
+      <text x="20" y="60" fill="#818cf8" font-size="24" font-weight="700">v1</text>
+      <text x="20" y="84" fill="#cdd0e8" font-size="11">author addresses flags</text>
+    </g>
+    <path d="M 410 50 L 460 50" stroke="#6366f1" stroke-width="1.5" fill="none" marker-end="url(#arrI)"/>
+    <text x="420" y="40" fill="#6b6f96" font-size="9" letter-spacing="1">REV 2</text>
+
+    <!-- v2 -->
+    <g transform="translate(460,0)">
+      <rect width="180" height="100" rx="6" fill="url(#bg)" stroke="#818cf8" stroke-width="1.5"/>
+      <text x="20" y="28" fill="#6b6f96" font-size="10" letter-spacing="1">REVISION 2</text>
+      <text x="20" y="60" fill="#818cf8" font-size="24" font-weight="700">v2</text>
+      <text x="20" y="84" fill="#cdd0e8" font-size="11">second-pass triage</text>
+    </g>
+    <path d="M 640 50 L 690 50" stroke="#fbbf24" stroke-width="1.5" fill="none" marker-end="url(#arrY)"/>
+    <text x="648" y="40" fill="#fbbf24" font-size="9" letter-spacing="1">RESIDUAL</text>
+
+    <!-- unresolved -->
+    <g transform="translate(690,0)">
+      <rect width="240" height="100" rx="6" fill="url(#bgY)" stroke="#fbbf24" stroke-width="1.5"/>
+      <text x="20" y="28" fill="#fbbf24" font-size="10" letter-spacing="1">AFTER v2</text>
+      <text x="20" y="60" fill="#fbbf24" font-size="20" font-weight="700">Unresolved Issues</text>
+      <text x="20" y="84" fill="#cdd0e8" font-size="11">recorded · visible · owned</text>
+    </g>
+  </g>
+
+  <!-- footer band -->
+  <g transform="translate(40,250)">
+    <rect width="890" height="44" rx="4" fill="#0f0f1e" stroke="#1e1b4b"/>
+    <text x="20" y="22" fill="#cdd0e8" font-size="11"><tspan fill="#818cf8" font-weight="700">Stopping rule:</tspan> at most two revision passes per deliverable.</text>
+    <text x="20" y="38" fill="#6b6f96" font-size="10">Issues unresolved after v2 are <tspan fill="#fbbf24">not silently re-worked</tspan> — they are recorded on the deliverable. Closure replaces drift.</text>
+  </g>
+</svg>

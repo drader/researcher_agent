@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>researcher_agent — architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --accent: #818cf8;
+    --accent-dim: #6366f1;
+    --accent-deep: #4f46e5;
+    --accent-muted: #1e1b4b;
+    --accent-glow: rgba(129,140,248,0.18);
+    --bg: #0a0a14;
+    --bg2: #0f0f1e;
+    --bg3: #14142a;
+    --text: #cdd0e8;
+    --text-dim: #6b6f96;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --green: #34d399;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.035) 2px, rgba(0,0,0,0.035) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at top, rgba(99,102,241,0.06), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .deck { width: 100vw; height: 100vh; position: relative; z-index: 1; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 56px 72px; opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+  }
+  .slide.active { opacity: 1; pointer-events: all; }
+
+  .label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 20px; }
+  .label span { color: var(--accent); }
+
+  h1 { font-size: clamp(40px, 5.6vw, 64px); font-weight: 700; color: var(--accent); line-height: 1.1; text-align: center; letter-spacing: -0.01em; }
+  h2 { font-size: clamp(24px, 3.4vw, 40px); font-weight: 600; color: var(--accent); line-height: 1.2; margin-bottom: 28px; text-align: center; }
+  h3 { font-size: clamp(16px, 2.2vw, 22px); font-weight: 600; color: var(--text); margin-bottom: 14px; }
+
+  p { font-size: clamp(13px, 1.6vw, 17px); line-height: 1.65; color: var(--text); max-width: 760px; text-align: center; }
+  .sub { font-size: clamp(12px, 1.4vw, 15px); color: var(--text-dim); margin-top: 14px; text-align: center; }
+
+  pre, code { font-family: 'JetBrains Mono', monospace; }
+
+  .ascii-block {
+    background: var(--bg2);
+    border: 1px solid var(--accent-muted);
+    border-radius: 6px;
+    padding: 22px 28px;
+    color: var(--text);
+    font-size: clamp(11px, 1.2vw, 14px);
+    line-height: 1.55;
+    white-space: pre;
+    overflow: auto;
+    max-width: 100%;
+    box-shadow: 0 0 40px var(--accent-glow);
+  }
+  .ascii-block .a { color: var(--accent); }
+  .ascii-block .d { color: var(--text-dim); }
+  .ascii-block .y { color: var(--yellow); }
+  .ascii-block .g { color: var(--green); }
+  .ascii-block .r { color: var(--red); }
+
+  .diagram { width: 100%; max-width: 1040px; border: 1px solid var(--accent-muted); border-radius: 6px; box-shadow: 0 0 40px var(--accent-glow); background: var(--bg2); display: block; }
+  .diagram-wide { max-width: 1100px; }
+
+  .terminal {
+    background: var(--bg2); border: 1px solid var(--accent-muted); border-radius: 6px;
+    padding: 26px 30px 22px; font-size: clamp(12px, 1.4vw, 15px); line-height: 1.85;
+    color: var(--text); width: 100%; max-width: 760px;
+    box-shadow: 0 0 40px var(--accent-glow); position: relative;
+  }
+  .terminal::before { content: '● ● ●'; position: absolute; top: 10px; left: 16px; font-size: 10px; color: var(--text-dim); letter-spacing: 6px; }
+  .terminal .prompt { color: var(--accent); }
+  .terminal .hi { color: var(--accent); font-weight: 600; }
+  .terminal .out { color: var(--text-dim); }
+  .terminal .cmd { color: var(--text); }
+  .terminal .y { color: var(--yellow); }
+  .terminal .g { color: var(--green); }
+  .terminal .r { color: var(--red); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 980px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; width: 100%; max-width: 1040px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; width: 100%; max-width: 1100px; }
+
+  .arch-box { background: var(--bg2); border: 1px solid var(--accent-muted); border-radius: 6px; padding: 18px 22px; text-align: left; }
+  .arch-box .arch-title { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; border-bottom: 1px solid var(--accent-muted); padding-bottom: 8px; }
+  .arch-box ul { list-style: none; }
+  .arch-box li { font-size: clamp(11px, 1.2vw, 14px); color: var(--text-dim); padding: 3px 0; }
+  .arch-box li::before { content: '— '; color: var(--accent); }
+  .arch-box li span { color: var(--text); }
+
+  .tier-table { width: 100%; max-width: 880px; border-collapse: collapse; }
+  .tier-table th { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--accent-muted); }
+  .tier-table td { font-size: clamp(11px, 1.3vw, 14px); color: var(--text); padding: 8px 12px; border-bottom: 1px solid rgba(30,27,75,0.5); vertical-align: top; }
+  .tier-table td:first-child { color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .tier-table td.dim { color: var(--text-dim); }
+  .tier-table td.gen { color: #c4b5fd; }
+  .tier-table td.ana { color: #67e8f9; }
+  .tier-table td.warn { color: var(--yellow); }
+
+  .divider { width: 48px; height: 2px; background: var(--accent); margin: 22px auto; box-shadow: 0 0 12px var(--accent); }
+
+  .progress { position: fixed; bottom: 0; left: 0; right: 0; height: 2px; background: var(--accent-muted); z-index: 500; }
+  .progress-bar { height: 100%; background: var(--accent); box-shadow: 0 0 8px var(--accent); transition: width 0.35s ease; }
+  .slide-counter { position: fixed; bottom: 20px; right: 28px; font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; z-index: 500; }
+  .slide-counter span { color: var(--accent); }
+  .nav-hint { position: fixed; bottom: 20px; left: 28px; font-size: 11px; color: var(--text-dim); letter-spacing: 0.08em; z-index: 500; }
+
+  .title-tag { display: inline-block; border: 1px solid var(--accent-muted); color: var(--text-dim); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; padding: 5px 14px; border-radius: 20px; margin-bottom: 24px; }
+  .nav-bar { position: fixed; top: 14px; left: 16px; z-index: 2000; display: flex; gap: 8px; }
+  .nav-link { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); text-decoration: none; padding: 5px 12px; border: 1px solid var(--accent-muted); border-radius: 3px; background: rgba(10,10,20,0.85); backdrop-filter: blur(6px); transition: color 0.15s, border-color 0.15s; }
+  .nav-link:hover { color: var(--accent); border-color: var(--accent); }
+  .nav-link.active { color: var(--accent); border-color: var(--accent); }
+
+  .layer-stack { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 880px; }
+  .layer-row { display: grid; grid-template-columns: 180px 1fr; gap: 18px; background: var(--bg2); border: 1px solid var(--accent-muted); border-left: 3px solid var(--accent); border-radius: 5px; padding: 14px 20px; align-items: center; }
+  .layer-row .layer-name { color: var(--accent); font-size: clamp(13px, 1.5vw, 16px); font-weight: 600; letter-spacing: 0.05em; }
+  .layer-row .layer-body { color: var(--text); font-size: clamp(12px, 1.3vw, 14px); line-height: 1.55; }
+  .layer-row .layer-body code { background: var(--bg3); padding: 1px 6px; border-radius: 2px; color: var(--accent); font-size: 0.95em; }
+
+  .checkpoint-row { display: grid; grid-template-columns: 60px 1fr 200px; gap: 14px; background: var(--bg2); border: 1px solid var(--accent-muted); border-radius: 5px; padding: 12px 18px; align-items: center; width: 100%; max-width: 880px; margin-bottom: 8px; }
+  .checkpoint-row .cp-num { color: var(--accent); font-weight: 700; font-size: clamp(14px, 1.6vw, 18px); }
+  .checkpoint-row .cp-name { color: var(--text); font-size: clamp(12px, 1.4vw, 15px); }
+  .checkpoint-row .cp-stage { color: var(--text-dim); font-size: 11px; text-align: right; letter-spacing: 0.1em; text-transform: uppercase; }
+  .checkpoint-row.optional { border-left: 3px solid var(--text-dim); }
+  .checkpoint-row.mandatory { border-left: 3px solid var(--yellow); }
+  .checkpoint-row.mandatory .cp-stage { color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<div class="nav-bar">
+  <a href="index.html" class="nav-link">index</a>
+  <a href="architecture.html" class="nav-link active">architecture</a>
+</div>
+
+<div class="deck">
+
+  <!-- SLIDE 1: TITLE -->
+  <div class="slide active" id="s1">
+    <div class="title-tag">technical architecture · v1.0.0</div>
+    <h1>researcher_agent</h1>
+    <div class="divider"></div>
+    <p style="font-size:clamp(15px,2vw,21px); color:var(--text-dim);">
+      How the framework is put together.
+    </p>
+    <p class="sub" style="margin-top:32px; max-width:700px;">
+      Skills, sub-agents, slash commands, modes, checkpoints, provenance.<br>
+      What lives where, how files are discovered, what happens at each gate.
+    </p>
+  </div>
+
+  <!-- SLIDE 2: HIGH LEVEL -->
+  <div class="slide" id="s2">
+    <div class="label">High-level topology</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px);">Three discovery surfaces. One shared infrastructure.</h2>
+    <img src="docs/diagrams/topology.svg" alt="researcher_agent topology: User invokes Claude Code which dispatches to slash commands, skills, and sub-agents; each surface references a shared infrastructure layer." class="diagram" style="max-width:880px;">
+    <p class="sub" style="margin-top:22px;">
+      Claude Code discovers each layer by convention: <code style="color:var(--accent);">.claude/skills/&lt;name&gt;/SKILL.md</code>,
+      <code style="color:var(--accent);">.claude/commands/*.md</code>, <code style="color:var(--accent);">.claude/agents/*.md</code>.
+      Symlink-installable per project or user-wide.
+    </p>
+  </div>
+
+  <!-- SLIDE 3: SKILL ANATOMY -->
+  <div class="slide" id="s3">
+    <div class="label">Skill anatomy</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px);">Each skill is a self-contained unit.</h2>
+    <div class="ascii-block">
+<span class="a">skills/&lt;skill&gt;/</span>
+<span class="d">├──</span> <span class="a">SKILL.md</span>           <span class="d">front-door: name, description, modes, triggers</span>
+<span class="d">├──</span> <span class="a">agents/</span>             <span class="d">sub-agent personas used internally by this skill</span>
+<span class="d">│   ├──</span> question-formulator.md
+<span class="d">│   ├──</span> source-searcher.md
+<span class="d">│   └──</span> synthesizer.md
+<span class="d">├──</span> <span class="a">references/</span>         <span class="d">methodology / standards docs</span>
+<span class="d">│   ├──</span> prisma-2020.md
+<span class="d">│   ├──</span> socratic-method.md
+<span class="d">│   └──</span> apa7-citation.md
+<span class="d">├──</span> <span class="a">templates/</span>          <span class="d">output structure templates per mode</span>
+<span class="d">│   ├──</span> brief-report.md
+<span class="d">│   ├──</span> systematic-review.md
+<span class="d">│   └──</span> verification-report.md
+<span class="d">└──</span> <span class="a">examples/</span>           <span class="d">synthetic worked examples for prompt grounding</span>
+    </div>
+    <p class="sub" style="margin-top:22px;">
+      <code style="color:var(--accent);">SKILL.md</code> uses YAML frontmatter to declare name, description, trigger phrases, and the mode list.
+      Claude Code's skill loader reads this and surfaces the skill.
+    </p>
+  </div>
+
+  <!-- SLIDE 4: MODE TAXONOMY -->
+  <div class="slide" id="s4">
+    <div class="label">Mode taxonomy</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:24px;">A mode is a parameterization, not a separate skill.</h2>
+    <table class="tier-table">
+      <tr>
+        <th>Axis</th>
+        <th>Values</th>
+        <th>What it controls</th>
+      </tr>
+      <tr>
+        <td>Spectrum bias</td>
+        <td><span style="color:#c4b5fd;">Generative</span> · <span style="color:var(--text);">Hybrid</span> · <span style="color:#67e8f9;">Analytic</span></td>
+        <td class="dim">How the skill weights creativity vs verifiability vs questioning.</td>
+      </tr>
+      <tr>
+        <td>Deliverable</td>
+        <td>brief · report · dialogue · audit · format · disclosure</td>
+        <td class="dim">What artefact (if any) the mode produces.</td>
+      </tr>
+      <tr>
+        <td>Oversight</td>
+        <td>Low · Medium · High · Very High</td>
+        <td class="dim">How often the user is asked to approve mid-flow.</td>
+      </tr>
+      <tr>
+        <td>Triggers</td>
+        <td>natural-language patterns</td>
+        <td class="dim">What activates the mode when no slash command is used.</td>
+      </tr>
+    </table>
+    <p class="sub" style="margin-top:24px; max-width:760px;">
+      Modes branch within a skill's logic.
+      24 modes across 4 skills. Canonical list in <code style="color:var(--accent);">MODE_REGISTRY.md</code>.
+    </p>
+  </div>
+
+  <!-- SLIDE 5: THE 24 MODES -->
+  <div class="slide" id="s5">
+    <div class="label">The 24 modes</div>
+    <h2 style="font-size:clamp(20px,2.8vw,32px); margin-bottom:18px;">Canonical map.</h2>
+    <table class="tier-table" style="max-width:980px; font-size:clamp(10px,1.15vw,13px);">
+      <tr>
+        <th>Skill</th>
+        <th>Mode</th>
+        <th>Spectrum</th>
+        <th>Output</th>
+        <th>Oversight</th>
+      </tr>
+      <tr><td rowspan="7">research</td><td>brief</td><td class="ana">Analytic</td><td class="dim">500–1500 word summary</td><td class="dim">Low</td></tr>
+      <tr><td>full</td><td>Hybrid</td><td class="dim">3000–8000 word report, APA 7</td><td class="dim">High</td></tr>
+      <tr><td>socratic</td><td class="gen">Generative</td><td class="dim">refined question + plan</td><td class="warn">Very High</td></tr>
+      <tr><td>systematic</td><td class="ana">Analytic</td><td class="dim">PRISMA 2020 review</td><td class="dim">Medium</td></tr>
+      <tr><td>verify</td><td class="ana">Analytic</td><td class="dim">claim-by-claim verification</td><td class="dim">Medium</td></tr>
+      <tr><td>annotate</td><td class="ana">Analytic</td><td class="dim">annotated bibliography</td><td class="dim">Medium</td></tr>
+      <tr><td>evaluate</td><td>Hybrid</td><td class="dim">critical review of one source</td><td class="dim">High</td></tr>
+      <tr><td rowspan="9">compose</td><td>full</td><td>Hybrid</td><td class="dim">complete manuscript draft</td><td class="dim">High</td></tr>
+      <tr><td>outline</td><td>Hybrid</td><td class="dim">outline + evidence map</td><td class="dim">High</td></tr>
+      <tr><td>revision</td><td class="ana">Analytic</td><td class="dim">revised draft + response letter</td><td class="dim">High</td></tr>
+      <tr><td>revision-triage</td><td>Hybrid</td><td class="dim">revision roadmap from reviews</td><td class="dim">Medium</td></tr>
+      <tr><td>abstract</td><td class="ana">Analytic</td><td class="dim">abstract + keywords</td><td class="dim">Medium</td></tr>
+      <tr><td>lit-section</td><td class="ana">Analytic</td><td class="dim">lit-review as integrated prose</td><td class="dim">Medium</td></tr>
+      <tr><td>format</td><td class="ana">Analytic</td><td class="dim">LaTeX / DOCX / PDF / MD</td><td class="dim">Low</td></tr>
+      <tr><td>citation-check</td><td class="ana">Analytic</td><td class="dim">citation consistency audit</td><td class="dim">Low</td></tr>
+      <tr><td>disclosure</td><td class="ana">Analytic</td><td class="dim">venue-specific AI disclosure</td><td class="dim">Low</td></tr>
+      <tr><td rowspan="6">critique</td><td>full</td><td>Hybrid</td><td class="dim">5 reviewer reports + decision</td><td class="dim">High</td></tr>
+      <tr><td>quick</td><td class="ana">Analytic</td><td class="dim">brief editor first-impression</td><td class="dim">Low</td></tr>
+      <tr><td>methodology</td><td class="ana">Analytic</td><td class="dim">in-depth methods critique</td><td class="dim">Medium</td></tr>
+      <tr><td>re-review</td><td class="ana">Analytic</td><td class="dim">revision verification</td><td class="dim">Medium</td></tr>
+      <tr><td>guided</td><td class="gen">Generative</td><td class="dim">issue-by-issue dialogue</td><td class="warn">Very High</td></tr>
+      <tr><td>calibration</td><td class="ana">Analytic</td><td class="dim">reviewer-accuracy report</td><td class="dim">Medium</td></tr>
+      <tr><td rowspan="2">orchestrate</td><td>pipeline</td><td>Hybrid</td><td class="dim">10-stage end-to-end workflow</td><td class="warn">Very High</td></tr>
+      <tr><td>resume</td><td class="ana">Analytic</td><td class="dim">resume from pipeline-logbook</td><td class="dim">High</td></tr>
+    </table>
+  </div>
+
+  <!-- SLIDE 6: SUB-AGENT LAYER -->
+  <div class="slide" id="s6">
+    <div class="label">Sub-agent layer</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px);">21 personas. Four skills. Cognitive division of labor.</h2>
+    <div class="grid-4" style="margin-top:18px;">
+      <div class="arch-box">
+        <div class="arch-title">research <span style="color:var(--text-dim);">· 5</span></div>
+        <ul>
+          <li><span>question-formulator</span></li>
+          <li><span>source-searcher</span></li>
+          <li><span>source-verifier</span></li>
+          <li><span>synthesizer</span></li>
+          <li><span>report-compiler</span></li>
+        </ul>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">compose <span style="color:var(--text-dim);">· 6</span></div>
+        <ul>
+          <li><span>drafter</span></li>
+          <li><span>reviser</span></li>
+          <li><span>response-letter-writer</span></li>
+          <li><span>citation-checker</span></li>
+          <li><span>format-converter</span></li>
+          <li><span>disclosure-generator</span></li>
+        </ul>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">critique <span style="color:var(--text-dim);">· 6</span></div>
+        <ul>
+          <li><span>completeness-reviewer</span></li>
+          <li><span>methodology-critic</span></li>
+          <li><span>clarity-reviewer</span></li>
+          <li><span>literature-critic</span></li>
+          <li><span>devil-advocate</span></li>
+          <li><span>editorial-decider</span></li>
+        </ul>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">orchestrate <span style="color:var(--text-dim);">· 4</span></div>
+        <ul>
+          <li><span>pipeline-conductor</span></li>
+          <li><span>checkpoint-coordinator</span></li>
+          <li><span>gap-detector</span></li>
+          <li><span>state-persistor</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:22px; max-width:780px;">
+      Sub-agents are invoked sequentially or in parallel by their parent skill, with results passed through.
+      All v1.0.0 personas are skill-internal (<code style="color:var(--accent);">skills/&lt;skill&gt;/agents/</code>);
+      canonical list in <code style="color:var(--accent);">AGENT_REGISTRY.md</code>.
+    </p>
+  </div>
+
+  <!-- SLIDE 7: CHECKPOINT DISCIPLINE -->
+  <div class="slide" id="s7">
+    <div class="label">Checkpoint discipline</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:24px;">Two checkpoint types. Six mandatory pipeline gates.</h2>
+    <div style="width:100%; max-width:920px;">
+      <div class="checkpoint-row optional">
+        <div class="cp-num">FYI</div>
+        <div class="cp-name"><strong style="color:var(--text);">Optional</strong> — user is shown progress, can redirect. Skipped silently if no response.</div>
+        <div class="cp-stage">any stage</div>
+      </div>
+      <div class="checkpoint-row mandatory">
+        <div class="cp-num">G1</div>
+        <div class="cp-name">Scope locked — primary question chosen</div>
+        <div class="cp-stage">after stage 1</div>
+      </div>
+      <div class="checkpoint-row mandatory">
+        <div class="cp-num">G2</div>
+        <div class="cp-name">Synthesis approved — evidence base set</div>
+        <div class="cp-stage">after stage 3</div>
+      </div>
+      <div class="checkpoint-row mandatory">
+        <div class="cp-num">G3</div>
+        <div class="cp-name">Outline approved — structure committed</div>
+        <div class="cp-stage">after stage 4</div>
+      </div>
+      <div class="checkpoint-row mandatory">
+        <div class="cp-num">G4</div>
+        <div class="cp-name">Self-critique acknowledged — roadmap accepted</div>
+        <div class="cp-stage">after stage 6</div>
+      </div>
+      <div class="checkpoint-row mandatory">
+        <div class="cp-num">G5</div>
+        <div class="cp-name">Revision accepted — citations clean</div>
+        <div class="cp-stage">after stage 8</div>
+      </div>
+      <div class="checkpoint-row mandatory">
+        <div class="cp-num">G6</div>
+        <div class="cp-name">Final manuscript accepted</div>
+        <div class="cp-stage">after stage 9</div>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:18px; max-width:880px;">
+      Canonical list lives in <code style="color:var(--accent);">skills/orchestrate/SKILL.md</code> §3–4.
+      Maximum two revision loops per deliverable; after v2, anything still open becomes <span style="color:var(--yellow);">Unresolved Issues</span>.
+    </p>
+  </div>
+
+  <!-- SLIDE 8: PROVENANCE -->
+  <div class="slide" id="s8">
+    <div class="label">Provenance</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:24px;">Every claim is anchored to one of three sources.</h2>
+    <div class="layer-stack">
+      <div class="layer-row">
+        <div class="layer-name">Cited source</div>
+        <div class="layer-body">External reference with locator: <code>page</code>, <code>section</code>, or <code>paragraph</code>. The default and most common.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-name">User input</div>
+        <div class="layer-body">A value the user supplied. Anchored by <code>timestamp</code> or <code>message reference</code> from the session.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-name">Framework computation</div>
+        <div class="layer-body">Internal aggregation (e.g., <code>"synthesis across sources A, B, and C"</code>). Always explicitly marked as such.</div>
+      </div>
+      <div class="layer-row" style="border-left-color:var(--yellow);">
+        <div class="layer-name" style="color:var(--yellow);">&lt;unverified&gt;</div>
+        <div class="layer-body">No anchor available. Claim is flagged and moved to a notes section. Not published as fact.</div>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:22px;">
+      The verification chain is what makes the difference between "fluent AI prose" and a defensible artefact.
+    </p>
+  </div>
+
+  <!-- SLIDE 9: PIPELINE FLOW -->
+  <div class="slide" id="s9">
+    <div class="label">orchestrate-pipeline</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:20px;">10 stages, 6 mandatory gates, fully resumable.</h2>
+    <img src="docs/diagrams/pipeline.svg" alt="orchestrate-pipeline: ten stages flowing from scope through lit-search, synthesis, outline, draft, self-critique, revise, citation-audit, finalize-format, to disclosure. Six mandatory human-approval gates after stages 1, 3, 4, 6, 8, and 9. Every stage writes to pipeline-logbook.json." class="diagram diagram-wide">
+  </div>
+
+  <!-- SLIDE 10: PIPELINE-LOGBOOK -->
+  <div class="slide" id="s10">
+    <div class="label">pipeline-logbook</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:22px;">A resumable run-state, one JSON file.</h2>
+    <div class="terminal">
+      <br>
+      <div class="out"># pipeline-logbook.json (excerpt)</div>
+      <div><span class="hi">{</span></div>
+      <div>&nbsp;&nbsp;<span class="hi">"run_id"</span><span class="cmd">: </span><span class="y">"2026-05-21-stochastic-snn"</span><span class="cmd">,</span></div>
+      <div>&nbsp;&nbsp;<span class="hi">"started"</span><span class="cmd">: </span><span class="y">"2026-05-12T09:14:00Z"</span><span class="cmd">,</span></div>
+      <div>&nbsp;&nbsp;<span class="hi">"current_stage"</span><span class="cmd">: </span><span class="y">"07_draft"</span><span class="cmd">,</span></div>
+      <div>&nbsp;&nbsp;<span class="hi">"stages"</span><span class="cmd">: [</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">{</span> <span class="hi">"id"</span><span class="cmd">: </span><span class="y">"01_scope"</span><span class="cmd">,    </span><span class="hi">"status"</span><span class="cmd">: </span><span class="g">"complete"</span><span class="cmd">, </span><span class="hi">"approved_at"</span><span class="cmd">: </span><span class="y">"…"</span> <span class="cmd">},</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">{</span> <span class="hi">"id"</span><span class="cmd">: </span><span class="y">"03_search"</span><span class="cmd">,   </span><span class="hi">"status"</span><span class="cmd">: </span><span class="g">"complete"</span><span class="cmd">, </span><span class="hi">"yield"</span><span class="cmd">: 187 </span><span class="cmd">},</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">{</span> <span class="hi">"id"</span><span class="cmd">: </span><span class="y">"04_inclusion"</span><span class="cmd">, </span><span class="hi">"status"</span><span class="cmd">: </span><span class="g">"complete"</span><span class="cmd">, </span><span class="hi">"included"</span><span class="cmd">: 23 </span><span class="cmd">},</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmd">{</span> <span class="hi">"id"</span><span class="cmd">: </span><span class="y">"07_draft"</span><span class="cmd">,    </span><span class="hi">"status"</span><span class="cmd">: </span><span class="y">"in_progress"</span> <span class="cmd">}</span></div>
+      <div>&nbsp;&nbsp;<span class="cmd">],</span></div>
+      <div>&nbsp;&nbsp;<span class="hi">"revision_count"</span><span class="cmd">: 0,</span></div>
+      <div>&nbsp;&nbsp;<span class="hi">"unresolved_issues"</span><span class="cmd">: []</span></div>
+      <div><span class="hi">}</span></div>
+      <div class="out">&nbsp;</div>
+      <div><span class="prompt">$ </span><span class="cmd">claude /orchestrate-resume</span></div>
+      <div class="g">  → picks up at 07_draft. Prior approvals honored.</div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: SLASH COMMAND LAYER -->
+  <div class="slide" id="s11">
+    <div class="label">Slash command layer</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:22px;">Thin shortcuts. Skill + mode in one frontmatter.</h2>
+    <div class="terminal" style="max-width:760px;">
+      <br>
+      <div class="out"># commands/research-verify.md</div>
+      <div class="y">---</div>
+      <div><span class="hi">description:</span><span class="cmd"> Claim-by-claim fact-check with source locators</span></div>
+      <div><span class="hi">model:</span><span class="cmd"> sonnet</span></div>
+      <div class="y">---</div>
+      <div class="out">&nbsp;</div>
+      <div class="cmd">Invoke the `research` skill in **verify mode**.</div>
+      <div class="cmd">This mode takes a piece of text and checks each factual claim</div>
+      <div class="cmd">against external sources. It produces a verification report,</div>
+      <div class="cmd">not a rewrite.</div>
+      <div class="cmd">...</div>
+    </div>
+    <p class="sub" style="margin-top:22px; max-width:760px;">
+      24 commands ship with v1.0.0, one per mode.
+      Discovered by Claude Code from <code style="color:var(--accent);">.claude/commands/*.md</code>.
+      Model override is optional; otherwise the command inherits.
+    </p>
+  </div>
+
+  <!-- SLIDE 12: FILE LAYOUT -->
+  <div class="slide" id="s12">
+    <div class="label">Repository layout</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:18px;">Where everything lives.</h2>
+    <div class="ascii-block">
+<span class="a">researcher_agent/</span>
+<span class="d">├──</span> <span class="a">README.md</span>              <span class="d">project overview, skill matrix, quick install</span>
+<span class="d">├──</span> <span class="a">ARCHITECTURE.md</span>        <span class="d">technical design (this deck mirrors it)</span>
+<span class="d">├──</span> <span class="a">MODE_REGISTRY.md</span>       <span class="d">canonical list of all 24 modes</span>
+<span class="d">├──</span> <span class="a">POSITIONING.md</span>         <span class="d">allowed/disallowed uses</span>
+<span class="d">├──</span> <span class="a">CONTRIBUTING.md</span>        <span class="d">originality requirement, PR process</span>
+<span class="d">├──</span> <span class="a">CHANGELOG.md</span>           <span class="d">release history</span>
+<span class="d">├──</span> <span class="a">LICENSE</span>                <span class="d">CC BY-NC 4.0</span>
+<span class="d">├──</span> <span class="a">NOTICE.md</span>              <span class="d">attribution + copyright</span>
+<span class="d">│</span>
+<span class="d">├──</span> <span class="a">skills/</span>                <span class="d">the four skills</span>
+<span class="d">│   ├──</span> research/           <span class="d">7 modes</span>
+<span class="d">│   ├──</span> compose/            <span class="d">9 modes</span>
+<span class="d">│   ├──</span> critique/           <span class="d">6 modes</span>
+<span class="d">│   └──</span> orchestrate/        <span class="d">2 modes</span>
+<span class="d">│</span>
+<span class="d">├──</span> <span class="a">commands/</span>              <span class="d">24 slash command files</span>
+<span class="d">├──</span> <span class="a">agents/</span>                <span class="d">top-level invokable personas</span>
+<span class="d">└──</span> <span class="a">docs/</span>                  <span class="d">SETUP.md and supplementary docs</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 13: NAMING -->
+  <div class="slide" id="s13">
+    <div class="label">Naming conventions</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:22px;">Boring, consistent, unambiguous.</h2>
+    <table class="tier-table">
+      <tr>
+        <th>Where</th>
+        <th>Convention</th>
+        <th>Example</th>
+      </tr>
+      <tr>
+        <td>File names</td>
+        <td class="dim">kebab-case</td>
+        <td class="dim">source-verifier.md</td>
+      </tr>
+      <tr>
+        <td>Skill names</td>
+        <td class="dim">kebab-case, single word where possible</td>
+        <td class="dim">research, compose</td>
+      </tr>
+      <tr>
+        <td>Mode names</td>
+        <td class="dim">kebab-case</td>
+        <td class="dim">systematic, revision-triage</td>
+      </tr>
+      <tr>
+        <td>Frontmatter keys</td>
+        <td class="dim">snake_case (per YAML convention)</td>
+        <td class="dim">trigger_phrases, model</td>
+      </tr>
+      <tr>
+        <td>Markdown headings</td>
+        <td class="dim">title case for major sections</td>
+        <td class="dim">## Mode Taxonomy</td>
+      </tr>
+      <tr>
+        <td>Slash commands</td>
+        <td class="dim">/&lt;skill&gt;-&lt;mode&gt;</td>
+        <td class="dim">/research-verify</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- SLIDE 14: EXTENSION -->
+  <div class="slide" id="s14">
+    <div class="label">Extension points</div>
+    <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:24px;">How to add a skill, mode, or sub-agent.</h2>
+    <div class="grid-2">
+      <div class="arch-box">
+        <div class="arch-title">Adding a new skill</div>
+        <ul>
+          <li><span>1. Create skills/&lt;new&gt;/SKILL.md</span></li>
+          <li><span>2. Add modes to MODE_REGISTRY.md</span></li>
+          <li><span>3. Add sub-agents under skills/&lt;new&gt;/agents/</span></li>
+          <li><span>4. Add slash commands under commands/</span></li>
+          <li><span>5. Update README skill matrix</span></li>
+        </ul>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">Adding a mode to an existing skill</div>
+        <ul>
+          <li><span>1. Update the skill's SKILL.md frontmatter</span></li>
+          <li><span>2. Add mode logic to skill prompt body</span></li>
+          <li><span>3. Add the mode to MODE_REGISTRY.md</span></li>
+          <li><span>4. Optionally add a slash command</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:24px; max-width:760px;">
+      Versioning is semantic: MAJOR breaks skill API or file structure; MINOR adds skills/modes/non-breaking enhancements; PATCH fixes prompts or docs.
+      See <code style="color:var(--accent);">CHANGELOG.md</code>.
+    </p>
+  </div>
+
+  <!-- SLIDE 15: CLOSE -->
+  <div class="slide" id="s15">
+    <div class="label">Architecture summary</div>
+    <h2 style="margin-bottom:24px;">Three layers, one rule:<br>provenance over fluency.</h2>
+    <div class="layer-stack" style="max-width:760px;">
+      <div class="layer-row">
+        <div class="layer-name">Discovery</div>
+        <div class="layer-body">Three convention-based surfaces (<code>.claude/skills</code>, <code>.claude/commands</code>, <code>.claude/agents</code>) registered with Claude Code.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-name">Execution</div>
+        <div class="layer-body">Skill + mode parameterizes workflow. Sub-agents do specialized work. Checkpoints enforce human approval. Two-loop revision cap.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-name">Audit</div>
+        <div class="layer-body">Every claim anchored to source, user input, or framework computation. Pipeline-logbook captures decisions. Disclosure mode regenerates the audit trail for venues.</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <p class="sub" style="margin-top:8px;">
+      <span style="color:var(--accent);">github.com/drader/researcher_agent</span> &nbsp;·&nbsp; v1.0.0 &nbsp;·&nbsp; CC BY-NC 4.0
+    </p>
+  </div>
+
+</div><!-- /deck -->
+
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+<div class="slide-counter"><span id="currentSlide">1</span> / <span id="totalSlides"></span></div>
+<div class="nav-hint">← → arrow keys &nbsp;·&nbsp; space</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  document.getElementById('totalSlides').textContent = total;
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(total - 1, n));
+    slides[current].classList.add('active');
+    document.getElementById('currentSlide').textContent = current + 1;
+    document.getElementById('progressBar').style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                     { e.preventDefault(); goTo(current - 1); }
+    if (e.key === 'Home') goTo(0);
+    if (e.key === 'End')  goTo(total - 1);
+  });
+
+  let touchX = 0;
+  document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) goTo(dx < 0 ? current + 1 : current - 1);
+  });
+
+  goTo(0);
+</script>
+</body>
+</html>
