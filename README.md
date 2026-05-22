@@ -33,6 +33,27 @@ formatting, consistency checking, draft assembly) and leaves the
 intellectual work — what to argue, what to measure, how to interpret —
 to you.
 
+## Where this fits
+
+`researcher_agent` is built for **atomic artefact production** — taking
+a research question to a verified, peer-review-grade deliverable (a
+systematic review, a manuscript, a critique). Each artefact is
+self-contained, carries claim-level provenance, and does not depend on
+the framework remembering anything between sessions.
+
+It is deliberately **not** a knowledge base. It does not accumulate
+domain expertise over time, maintain a personal wiki, or run agents on
+a schedule. If you want a system that continuously ingests sources and
+grows a body of domain knowledge, that is a different pattern — an
+agentic knowledge-vault.
+
+The two compose well side by side: a knowledge-vault for **daily
+accumulation** (ingesting papers, building a domain wiki) and
+`researcher_agent` for the **writing, review, and disclosure moment**
+when that material becomes a concrete deliverable. They use separate
+directories — no cross-contamination — and the handoff between them is
+intentionally manual: you decide what crosses over.
+
 ## Skill matrix
 
 | Skill | Purpose | Modes | Phase |
