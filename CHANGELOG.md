@@ -63,6 +63,39 @@ add new modes within existing skills, or extend the framework
 based on user feedback — but the original four-phase plan is
 complete.
 
+### Build infrastructure — 2026-05-23
+
+A small but consequential change within v1.0.0: HTML report pages
+moved from repo root to `docs/` to give GitHub Pages a clean source.
+
+#### Changed
+
+- `index.html` → `docs/index.html` (file moved)
+- `architecture.html` → `docs/architecture.html` (file moved)
+- SVG `<img src>` paths in both HTML files updated: `docs/diagrams/...`
+  → `diagrams/...` (relative to the HTML's new directory)
+- `CLAUDE.md` — parity rule table and surface-list updated to reference
+  `docs/index.html` / `docs/architecture.html`; new explanation of why
+  the files live under `docs/` (Pages source path)
+- `CONTRIBUTING.md` — PR step 6 link paths updated
+- `.github/PULL_REQUEST_TEMPLATE.md` — link paths updated
+- `.github/ISSUE_TEMPLATE/documentation-issue.yml` — placeholder and
+  label paths updated
+- `scripts/parity-check.sh` — all HTML file path references updated;
+  img-src resolver now uses the HTML's own directory as the relative base
+- GitHub Pages source switched from `branch:main path:/` to
+  `branch:main path:/docs` (configuration change, applied via API after
+  the commit lands)
+
+#### Why
+
+Pages with source `/` makes Jekyll parse every markdown in the repo.
+Several `commands/*.md` and persona files contain `{{ ... }}` notation
+that collides with Liquid template syntax, failing the build. memex's
+pattern (HTML under `docs/`, Pages source `/docs`) avoids the issue
+entirely — Jekyll sees only the static HTML/SVG, not the rest of the
+repository. This change adopts that pattern.
+
 ### Community readiness pass — 2026-05-22
 
 A documentation and infrastructure pass within v1.0.0, prior to the

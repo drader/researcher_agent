@@ -185,7 +185,7 @@
   <div class="slide" id="s2">
     <div class="label">High-level topology</div>
     <h2 style="font-size:clamp(20px,2.8vw,34px);">Three discovery surfaces. One shared infrastructure.</h2>
-    <img src="docs/diagrams/topology.svg" alt="researcher_agent topology: User invokes Claude Code which dispatches to slash commands, skills, and sub-agents; each surface references a shared infrastructure layer." class="diagram" style="max-width:880px;">
+    <img src="diagrams/topology.svg" alt="researcher_agent topology: User invokes Claude Code which dispatches to slash commands, skills, and sub-agents; each surface references a shared infrastructure layer." class="diagram" style="max-width:880px;">
     <p class="sub" style="margin-top:22px;">
       Claude Code discovers each layer by convention: <code style="color:var(--accent);">.claude/skills/&lt;name&gt;/SKILL.md</code>,
       <code style="color:var(--accent);">.claude/commands/*.md</code>, <code style="color:var(--accent);">.claude/agents/*.md</code>.
@@ -428,7 +428,7 @@
   <div class="slide" id="s9">
     <div class="label">orchestrate-pipeline</div>
     <h2 style="font-size:clamp(20px,2.8vw,34px); margin-bottom:20px;">10 stages, 6 mandatory gates, fully resumable.</h2>
-    <img src="docs/diagrams/pipeline.svg" alt="orchestrate-pipeline: ten stages flowing from scope through lit-search, synthesis, outline, draft, self-critique, revise, citation-audit, finalize-format, to disclosure. Six mandatory human-approval gates after stages 1, 3, 4, 6, 8, and 9. Every stage writes to pipeline-logbook.json." class="diagram diagram-wide">
+    <img src="diagrams/pipeline.svg" alt="orchestrate-pipeline: ten stages flowing from scope through lit-search, synthesis, outline, draft, self-critique, revise, citation-audit, finalize-format, to disclosure. Six mandatory human-approval gates after stages 1, 3, 4, 6, 8, and 9. Every stage writes to pipeline-logbook.json." class="diagram diagram-wide">
   </div>
 
   <!-- SLIDE 10: PIPELINE-LOGBOOK -->

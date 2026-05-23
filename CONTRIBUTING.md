@@ -57,7 +57,7 @@ copying prose.
 5. Update [MODE_REGISTRY.md](MODE_REGISTRY.md) and [CHANGELOG.md](CHANGELOG.md)
    if your change touches modes, skills, or commands.
 6. **Sync the HTML report pages.** If your change alters anything
-   reflected in [index.html](index.html) or [architecture.html](architecture.html)
+   reflected in [docs/index.html](docs/index.html) or [docs/architecture.html](docs/architecture.html)
    (skill or mode counts, command names, version, layout, principles,
    diagrams), update those files in the same PR. When a PR contains
    multiple commits, the final commit before pushing must be the HTML

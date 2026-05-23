@@ -32,7 +32,7 @@ body:
     attributes:
       label: File path
       description: The primary file affected. Use a repo-relative path.
-      placeholder: "e.g. ARCHITECTURE.md, skills/research/SKILL.md, index.html"
+      placeholder: "e.g. ARCHITECTURE.md, skills/research/SKILL.md, docs/index.html"
     validations:
       required: true
 
@@ -68,8 +68,8 @@ body:
       label: Parity impact (per CLAUDE.md)
       description: If accepted, would this also require updating any of the following?
       options:
-        - label: index.html
-        - label: architecture.html
+        - label: docs/index.html
+        - label: docs/architecture.html
         - label: docs/diagrams/*.svg
         - label: CITATION.cff
         - label: CHANGELOG.md (counts as a change)

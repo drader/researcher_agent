@@ -42,7 +42,7 @@ section "1. HTML structure (tag balance + slide count)"
 python3 - <<'PY' || FAILED=$((FAILED+1))
 import re, sys
 ok = True
-for f in ['index.html', 'architecture.html']:
+for f in ['docs/index.html', 'docs/architecture.html']:
     try:
         s = open(f).read()
     except FileNotFoundError:
@@ -73,15 +73,18 @@ section "2. Image references resolve to real files"
 python3 - <<'PY' || FAILED=$((FAILED+1))
 import re, os, sys
 ok = True
-for f in ['index.html', 'architecture.html']:
+for f in ['docs/index.html', 'docs/architecture.html']:
     if not os.path.exists(f): continue
+    base = os.path.dirname(f)
     for src in re.findall(r'<img[^>]*src="([^"]+)"', open(f).read()):
         if src.startswith(('http://','https://','data:')):
             continue
-        if os.path.exists(src):
+        # img src is relative to the HTML file's directory
+        full = os.path.normpath(os.path.join(base, src))
+        if os.path.exists(full):
             print(f"  \033[32m✓\033[0m {f}  →  {src}")
         else:
-            print(f"  \033[31m✗\033[0m {f}  →  {src}  (MISSING)")
+            print(f"  \033[31m✗\033[0m {f}  →  {src}  (resolves to {full}, MISSING)")
             ok = False
 sys.exit(0 if ok else 1)
 PY
@@ -182,7 +185,7 @@ for pat, expected, label in checks:
 sys.exit(0 if ok else 1)
 PY
 
-# ── 6. commands/ count vs README + index.html ───────────────────────────
+# ── 6. commands/ count vs README + docs/index.html ──────────────────────
 section "6. commands/*.md count consistency"
 
 python3 - <<'PY' || FAILED=$((FAILED+1))
@@ -190,14 +193,14 @@ import re, glob, sys
 disk = len(glob.glob('commands/*.md'))
 # Collapse whitespace before regex so multi-line breaks don't matter
 readme = re.sub(r'\s+', ' ', open('README.md').read())
-index  = open('index.html').read()
+index  = open('docs/index.html').read()
 m_r = re.search(r'(\d+)\s+slash\s+commands', readme)
 m_i = re.search(r'<span class="k">(\d+)</span>\s*slash\s*commands', index)
 readme_claim = int(m_r.group(1)) if m_r else None
 index_claim  = int(m_i.group(1)) if m_i else None
-print(f"  on-disk:      {disk} files in commands/")
-print(f"  README claim: {readme_claim}")
-print(f"  index.html:   {index_claim}")
+print(f"  on-disk:          {disk} files in commands/")
+print(f"  README claim:     {readme_claim}")
+print(f"  docs/index.html:  {index_claim}")
 if readme_claim == disk == index_claim:
     print(f"  \033[32m✓\033[0m all three agree at {disk}")
     sys.exit(0)
@@ -205,7 +208,7 @@ print(f"  \033[31m✗\033[0m disagreement")
 sys.exit(1)
 PY
 
-# ── 7. CHANGELOG.md latest version == index.html / CITATION.cff ─────────
+# ── 7. CHANGELOG.md latest version == docs/index.html / CITATION.cff ────
 section "7. Version + release date sync"
 
 python3 - <<'PY' || FAILED=$((FAILED+1))
@@ -234,17 +237,17 @@ else:
     print(f"  \033[31m✗\033[0m CITATION.cff date = {md.group(1) if md else 'missing'}")
     ok = False
 
-# index.html (slide 16 big-number + status text)
-idx = open('index.html').read()
+# docs/index.html (slide 16 big-number + status text)
+idx = open('docs/index.html').read()
 if f'v{ch_ver}' in idx or f'>{ch_ver}<' in idx:
-    print(f"  \033[32m✓\033[0m index.html mentions v{ch_ver}")
+    print(f"  \033[32m✓\033[0m docs/index.html mentions v{ch_ver}")
 else:
-    print(f"  \033[31m✗\033[0m index.html does not mention v{ch_ver}")
+    print(f"  \033[31m✗\033[0m docs/index.html does not mention v{ch_ver}")
     ok = False
 if ch_date in idx:
-    print(f"  \033[32m✓\033[0m index.html mentions {ch_date}")
+    print(f"  \033[32m✓\033[0m docs/index.html mentions {ch_date}")
 else:
-    print(f"  \033[31m✗\033[0m index.html does not mention {ch_date}")
+    print(f"  \033[31m✗\033[0m docs/index.html does not mention {ch_date}")
     ok = False
 
 # README.md Status section

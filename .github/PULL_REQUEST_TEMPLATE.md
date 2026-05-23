@@ -45,7 +45,7 @@ it fills. PRs without context are hard to evaluate.
 
 ## HTML report-page parity (CLAUDE.md Rule 1 + 2)
 
-- [ ] I checked whether [`index.html`](index.html) or [`architecture.html`](architecture.html) needs to follow this change (skill/mode counts, command names, version, layout, principles, diagrams, status block, registry counts).
+- [ ] I checked whether [`docs/index.html`](docs/index.html) or [`docs/architecture.html`](docs/architecture.html) needs to follow this change (skill/mode counts, command names, version, layout, principles, diagrams, status block, registry counts).
 - [ ] If a sync was needed, this PR includes that sync. If this PR is part of a series, the **final commit before push** is the sync commit (or the sync was empty and verified).
 
 ## Verification

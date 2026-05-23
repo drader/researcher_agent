@@ -9,18 +9,23 @@ For project overview see [README.md](README.md). For technical design see
 
 ---
 
-## Documentation parity — `index.html` and `architecture.html`
+## Documentation parity — `docs/index.html` and `docs/architecture.html`
 
-The two HTML files at the repo root are **report pages**: visual,
+The two HTML files under `docs/` are **report pages**: visual,
 slide-deck summaries of the project's current state. They are not
 generated artefacts — they are hand-maintained and must stay in lockstep
 with the rest of the repo.
 
+They live under `docs/` (not the repo root) so GitHub Pages can serve
+them from a clean source path (`docs/`) without Jekyll attempting to
+parse the rest of the repository's markdown — see the build entry in
+[CHANGELOG.md](CHANGELOG.md) for the historical context.
+
 | File | Mirrors |
 |---|---|
-| [index.html](index.html) | README.md · POSITIONING.md · MODE_REGISTRY.md · CHANGELOG.md |
-| [architecture.html](architecture.html) | ARCHITECTURE.md · MODE_REGISTRY.md · AGENT_REGISTRY.md · skills/* · commands/* · agents/* |
-| [docs/diagrams/*.svg](docs/diagrams/) | rendered into both pages |
+| [docs/index.html](docs/index.html) | README.md · POSITIONING.md · MODE_REGISTRY.md · CHANGELOG.md |
+| [docs/architecture.html](docs/architecture.html) | ARCHITECTURE.md · MODE_REGISTRY.md · AGENT_REGISTRY.md · skills/* · commands/* · agents/* |
+| [docs/diagrams/*.svg](docs/diagrams/) | rendered into both pages (referenced as `diagrams/...` from within docs/) |
 
 ### Single sources of truth
 
@@ -45,8 +50,8 @@ Update the dependents, not the authority.
 added or removed, a skill's mode count changes, a slash command is
 renamed, the version bumps, a principle is restated, the license changes,
 the directory layout shifts, a counted number anywhere changes), check
-whether `index.html` or `architecture.html` needs to follow. If yes,
-update it **in the same working session** and commit the change.
+whether `docs/index.html` or `docs/architecture.html` needs to follow. If
+yes, update it **in the same working session** and commit the change.
 
 **Rule 2 — sync before push.** If the working session produces multiple
 commits that will go out in a single `git push`, the **final commit
@@ -70,7 +75,7 @@ report pages must match the actual repo state.
 When something changes, the following surfaces in the HTML are the most
 common drift points. Walk this list before pushing.
 
-`index.html`:
+`docs/index.html`:
 - Slide 1 — version tag, license tag
 - Slide 13 — the four skill cards (skill names, mode counts, mode lists)
 - Slide 14 — pipeline diagram reference (if `docs/diagrams/pipeline.svg`
@@ -79,7 +84,7 @@ common drift points. Walk this list before pushing.
   commands, sub-agents, reference docs, templates, examples)
 - Slide 17 — repo URL, install snippet
 
-`architecture.html`:
+`docs/architecture.html`:
 - Slide 1 — version tag
 - Slide 5 — the 24-mode matrix (skill, mode, spectrum, output, oversight)
 - Slide 6 — sub-agent persona lists
@@ -109,8 +114,8 @@ detected; the script prints which one. The seven checks are:
 3. MODE_REGISTRY row counts per skill match the 7/9/6/2 contract (24 total)
 4. AGENT_REGISTRY persona names match `skills/<skill>/agents/*.md` filenames
 5. README's claimed counts (sub-agents, modes, slash commands) match reality
-6. `commands/*.md` file count agrees across disk, README, and `index.html`
-7. Version + release date in `CHANGELOG.md` latest entry match `CITATION.cff`, `index.html`, and `README.md`
+6. `commands/*.md` file count agrees across disk, README, and `docs/index.html`
+7. Version + release date in `CHANGELOG.md` latest entry match `CITATION.cff`, `docs/index.html`, and `README.md`
 
 If a check fails, fix the dependent file, not the authoritative source.
 The "Single sources of truth" table above lists which file wins per
